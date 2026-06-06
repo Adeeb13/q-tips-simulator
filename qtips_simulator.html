@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q-TIPS | Quantum Teleportation Identity Paradox Simulator</title>
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     QTIPS DESIGN SYSTEM — Cyberpunk Quantum Aesthetic
+     Color palette: void black, plasma cyan, neon magenta, chaos red
+  ═══════════════════════════════════════════════════════════════ */
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+
+  :root {
+    --void:       #020408;
+    --deep:       #040d14;
+    --panel:      #070f18;
+    --border:     #0d2233;
+    --cyan:       #00f5ff;
+    --cyan-dim:   #007a80;
+    --magenta:    #ff00aa;
+    --mag-dim:    #7a0052;
+    --green:      #00ff88;
+    --green-dim:  #00663a;
+    --yellow:     #ffdd00;
+    --yel-dim:    #665900;
+    --red:        #ff2244;
+    --red-dim:    #660016;
+    --white:      #e0f4ff;
+    --muted:      #3a6070;
+    --font-mono:  'Share Tech Mono', monospace;
+    --font-hud:   'Orbitron', sans-serif;
+    --font-body:  'Rajdhani', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--void);
+    color: var(--white);
+    font-family: var(--font-body);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+  }
+
+  /* ── Scanline overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,245,255,0.015) 2px,
+      rgba(0,245,255,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ── Vignette ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center,
+      transparent 40%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* ════════════════════════════════
+     LAYOUT
+  ════════════════════════════════ */
+  #app {
+    display: grid;
+    grid-template-rows: 60px 1fr 180px;
+    grid-template-columns: 280px 1fr 280px;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* ── Header ── */
+  #header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: linear-gradient(90deg, var(--deep) 0%, #0a1520 50%, var(--deep) 100%);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  #header::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), var(--magenta), transparent);
+    animation: borderFlow 3s linear infinite;
+  }
+  @keyframes borderFlow {
+    0%   { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; }
+  }
+
+  .logo {
+    font-family: var(--font-hud);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo span { font-size: 10px; letter-spacing: 2px; display: block; opacity: 0.6; }
+
+  .header-center {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--cyan-dim);
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .header-center strong { color: var(--cyan); display: block; font-size: 13px; }
+
+  .sys-clock {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .sys-clock span { color: var(--cyan); display: block; font-size: 14px; }
+
+  /* ── Left / Right panels ── */
+  .side-panel {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+  }
+  #panel-right { border-right: none; border-left: 1px solid var(--border); }
+
+  .panel-section {
+    background: rgba(0,245,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+  }
+  .panel-title {
+    font-family: var(--font-hud);
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--cyan-dim);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  /* ── Sliders ── */
+  .ctrl-row { margin-bottom: 12px; }
+  .ctrl-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .ctrl-label span { color: var(--cyan); font-size: 11px; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+    cursor: pointer;
+  }
+  input[type=range].mag::-webkit-slider-thumb { background: var(--magenta); box-shadow: 0 0 8px var(--magenta); }
+  input[type=range].grn::-webkit-slider-thumb { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  /* ── Metric tiles ── */
+  .metric {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+  }
+  .metric-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .metric-value {
+    font-family: var(--font-hud);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan-dim);
+    transition: color 0.3s;
+  }
+  .metric-value.warn { color: var(--yellow); text-shadow: 0 0 10px var(--yel-dim); }
+  .metric-value.danger { color: var(--red); text-shadow: 0 0 10px var(--red-dim); animation: glitch 0.2s infinite; }
+
+  @keyframes glitch {
+    0%   { transform: translate(0);   clip-path: none; }
+    20%  { transform: translate(-2px, 1px); clip-path: inset(20% 0 50% 0); }
+    40%  { transform: translate(2px, -1px); clip-path: inset(60% 0 10% 0); }
+    60%  { transform: translate(-1px, 2px); clip-path: none; }
+    80%  { transform: translate(1px, -2px); clip-path: inset(40% 0 30% 0); }
+    100% { transform: translate(0);   clip-path: none; }
+  }
+
+  /* ── Canvas area ── */
+  #canvas-wrap {
+    grid-column: 2;
+    grid-row: 2;
+    position: relative;
+    background: var(--deep);
+    overflow: hidden;
+  }
+  #main-canvas { display: block; width: 100%; height: 100%; }
+
+  /* ── Verdict overlay ── */
+  #verdict {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-hud);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    text-align: center;
+    padding: 8px 24px;
+    border: 1px solid;
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+    white-space: nowrap;
+  }
+  #verdict.active { opacity: 1; }
+  #verdict.safe    { color: var(--green);   border-color: var(--green);   background: rgba(0,255,136,0.07); box-shadow: 0 0 20px rgba(0,255,136,0.3); }
+  #verdict.warn    { color: var(--yellow);  border-color: var(--yellow);  background: rgba(255,221,0,0.07); box-shadow: 0 0 20px rgba(255,221,0,0.3); animation: flicker 0.4s infinite; }
+  #verdict.danger  { color: var(--red);     border-color: var(--red);     background: rgba(255,34,68,0.07);  box-shadow: 0 0 30px rgba(255,34,68,0.5); animation: glitch 0.15s infinite; }
+
+  @keyframes flicker {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+  }
+
+  /* ── Bottom telemetry strip ── */
+  #telemetry {
+    grid-column: 1 / -1;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 200px;
+    gap: 0;
+  }
+  .tele-block {
+    padding: 10px 16px;
+    border-right: 1px solid var(--border);
+  }
+  .tele-block:last-child { border-right: none; }
+  .tele-title {
+    font-family: var(--font-hud);
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  #fidelity-canvas, #entropy-canvas, #noise-canvas { width: 100%; height: 120px; display: block; }
+
+  /* ── Identity state bar ── */
+  #state-bar {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+  }
+  .state-item { display: flex; align-items: center; gap: 8px; }
+  .state-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .state-dot.active { box-shadow: 0 0 8px currentColor; }
+  .state-text {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    opacity: 0.4;
+    transition: opacity 0.3s, color 0.3s;
+  }
+  .state-text.active { opacity: 1; }
+
+  /* ── Node label ── */
+  .node-label {
+    position: absolute;
+    font-family: var(--font-hud);
+    font-size: 10px;
+    letter-spacing: 3px;
+    pointer-events: none;
+    text-shadow: 0 0 10px currentColor;
+  }
+  #label-alpha { color: var(--cyan); }
+  #label-beta  { color: var(--magenta); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════ HEADER ══════ -->
+  <header id="header">
+    <div class="logo">
+      Q-TIPS
+      <span>Quantum Teleportation Identity Paradox Simulator</span>
+    </div>
+    <div class="header-center">
+      <strong>Process Continuity Theory · Quantum Channel Identity Framework</strong>
+      Threshold: 1.5×10⁻¹² | CPTP Map Evaluation Engine v3.7
+    </div>
+    <div class="sys-clock">
+      SYS TIME
+      <span id="clock">00:00:00</span>
+    </div>
+  </header>
+
+  <!-- ══════ LEFT PANEL — CONTROLS ══════ -->
+  <aside class="side-panel" id="panel-left">
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ Quantum Parameters</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          Environmental Depolarizing Noise (p)
+          <span id="noise-val">0.00</span>
+        </div>
+        <input type="range" id="slider-noise" min="0" max="1" step="0.001" value="0.05">
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          Initial Entanglement Entropy
+          <span id="entropy-val">0.30</span>
+        </div>
+        <input type="range" id="slider-entropy" class="mag" min="0" max="1" step="0.01" value="0.30">
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">
+          Consciousness Qubit Scale (×10³)
+          <span id="qubit-val">50</span>
+        </div>
+        <input type="range" id="slider-qubits" class="grn" min="1" max="200" step="1" value="50">
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ CPTP Map Config</div>
+      <div class="metric">
+        <div class="metric-label">Kraus Operator Norm</div>
+        <div class="metric-value" id="kraus-norm">0.9742</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Decoherence Rate Γ</div>
+        <div class="metric-value" id="decoherence">2.14×10⁻⁴</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Channel Capacity C</div>
+        <div class="metric-value" id="channel-cap">0.8813</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ Threshold Monitor</div>
+      <div class="metric">
+        <div class="metric-label">Critical Threshold</div>
+        <div class="metric-value" style="color:var(--magenta)">1.5×10⁻¹²</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Effective Noise ·p·q</div>
+        <div class="metric-value" id="eff-noise">2.50×10⁻³</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Threshold Margin</div>
+        <div class="metric-value" id="threshold-margin">SAFE</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ══════ MAIN CANVAS ══════ -->
+  <main id="canvas-wrap">
+    <canvas id="main-canvas"></canvas>
+    <div id="verdict" class="safe active">INITIALIZING QUANTUM CHANNEL</div>
+    <div class="node-label" id="label-alpha">NODE α<br>SOURCE</div>
+    <div class="node-label" id="label-beta">NODE β<br>TARGET</div>
+  </main>
+
+  <!-- ══════ RIGHT PANEL — TELEMETRY ══════ -->
+  <aside class="side-panel" id="panel-right">
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ Causal Identity Fidelity</div>
+      <div class="metric">
+        <div class="metric-label">F(t) — Current</div>
+        <div class="metric-value" id="fidelity-now">0.9714</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">F(t) — Peak Session</div>
+        <div class="metric-value" id="fidelity-peak">0.9714</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ΔF / Δt (Decay Rate)</div>
+        <div class="metric-value" id="fidelity-decay">−0.0003</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ Von Neumann Entropy</div>
+      <div class="metric">
+        <div class="metric-label">S(ρ) — Current</div>
+        <div class="metric-value" id="vn-entropy">0.3000</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Purity Tr(ρ²)</div>
+        <div class="metric-value" id="purity">0.7000</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ Particle Stream</div>
+      <div class="metric">
+        <div class="metric-label">Active Particles</div>
+        <div class="metric-value" id="particle-count">120</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Avg Trajectory Δ</div>
+        <div class="metric-value" id="traj-delta">0.02°</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Coherence Length</div>
+        <div class="metric-value" id="coh-length">∞</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">⬡ Identity Verdict</div>
+      <div class="metric">
+        <div class="metric-label">Phase State</div>
+        <div class="metric-value" id="phase-state">STABLE</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">CCP Continuity</div>
+        <div class="metric-value" id="ccp">MAINTAINED</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">CIDT Breach</div>
+        <div class="metric-value" id="cidt">NEGATIVE</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ══════ BOTTOM TELEMETRY ══════ -->
+  <div id="telemetry">
+    <div class="tele-block">
+      <div class="tele-title">◈ Causal Fidelity F(t) — Live Trace</div>
+      <canvas id="fidelity-canvas"></canvas>
+    </div>
+    <div class="tele-block">
+      <div class="tele-title">◈ Entanglement Entropy S(ρ) — Evolution</div>
+      <canvas id="entropy-canvas"></canvas>
+    </div>
+    <div class="tele-block">
+      <div class="tele-title">◈ Noise Propagation p(t) — Waveform</div>
+      <canvas id="noise-canvas"></canvas>
+    </div>
+    <div id="state-bar">
+      <div class="tele-title" style="margin-bottom:12px">◈ IDENTITY PHASE</div>
+      <div class="state-item">
+        <div class="state-dot" id="dot-safe" style="background:var(--green); color:var(--green)"></div>
+        <div class="state-text" id="txt-safe">CONTINUOUS CAUSAL PROPAGATION</div>
+      </div>
+      <div class="state-item">
+        <div class="state-dot" id="dot-warn" style="background:var(--yellow); color:var(--yellow)"></div>
+        <div class="state-text" id="txt-warn">IDENTITY DIVERGENT TRANSITION</div>
+      </div>
+      <div class="state-item">
+        <div class="state-dot" id="dot-danger" style="background:var(--red); color:var(--red)"></div>
+        <div class="state-text" id="txt-danger">CHAOS IDENTITY DIVERGENCE THEOREM</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   Q-TIPS SIMULATION ENGINE
+   Author: Quantum Teleportation Identity Paradox Simulator
+   Based on: "Uploading the Self: Process Continuity Theory" &
+             "Quantum Channels as Bearers of Personal Identity"
+   Architecture: HTML5 Canvas + Vanilla JS, 60fps RAF loop
+══════════════════════════════════════════════════════════════════════ */
+
+// ─────────────────────────────────────────────────────────────────────
+// § 1 · SIMULATION STATE
+// ─────────────────────────────────────────────────────────────────────
+const SIM = {
+  noise:    0.05,   // Environmental depolarizing noise p ∈ [0,1]
+  entropy:  0.30,   // Initial entanglement entropy S(ρ) ∈ [0,1]
+  qubits:   50000,  // Consciousness qubit scale
+  fidelity: 1.0,    // Causal Identity Fidelity F(t)
+  phase:    'safe', // 'safe' | 'warn' | 'danger'
+  tick:     0,      // Global simulation tick
+  peakFid:  1.0,    // Session peak fidelity
+  prevFid:  1.0,    // For computing ΔF/Δt
+};
+
+// CRITICAL THRESHOLD from theoretical framework
+const CRITICAL_THRESHOLD = 1.5e-12;
+
+// ─────────────────────────────────────────────────────────────────────
+// § 2 · CANVAS SETUP
+// ─────────────────────────────────────────────────────────────────────
+const canvas   = document.getElementById('main-canvas');
+const ctx      = canvas.getContext('2d');
+const fCanvas  = document.getElementById('fidelity-canvas');
+const fCtx     = fCanvas.getContext('2d');
+const eCanvas  = document.getElementById('entropy-canvas');
+const eCtx     = eCanvas.getContext('2d');
+const nCanvas  = document.getElementById('noise-canvas');
+const nCtx     = nCanvas.getContext('2d');
+
+// Graph history buffers (ring buffer)
+const GRAPH_LEN = 180;
+const histFid   = new Float32Array(GRAPH_LEN);
+const histEnt   = new Float32Array(GRAPH_LEN);
+const histNoise = new Float32Array(GRAPH_LEN);
+let   histIdx   = 0;
+
+function resizeCanvases() {
+  const wrap = document.getElementById('canvas-wrap');
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  // Telemetry canvases
+  [fCanvas, eCanvas, nCanvas].forEach(c => {
+    c.width  = c.parentElement.clientWidth - 32;
+    c.height = 120;
+  });
+  positionNodeLabels();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 3 · NODE POSITIONS
+// ─────────────────────────────────────────────────────────────────────
+function getNodes() {
+  const W = canvas.width, H = canvas.height;
+  return {
+    alpha: { x: W * 0.18, y: H * 0.5 },  // Source node α
+    beta:  { x: W * 0.82, y: H * 0.5 },  // Target node β
+  };
+}
+
+function positionNodeLabels() {
+  const { alpha, beta } = getNodes();
+  const a = document.getElementById('label-alpha');
+  const b = document.getElementById('label-beta');
+  a.style.left = (alpha.x - 40) + 'px';
+  a.style.top  = (alpha.y + 60) + 'px';
+  b.style.left = (beta.x  - 40) + 'px';
+  b.style.top  = (beta.y  + 60) + 'px';
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 4 · PARTICLE SYSTEM
+// ─────────────────────────────────────────────────────────────────────
+class Particle {
+  constructor() { this.reset(); }
+
+  reset() {
+    const { alpha, beta } = getNodes();
+    this.x  = alpha.x + (Math.random() - 0.5) * 12;
+    this.y  = alpha.y + (Math.random() - 0.5) * 12;
+    this.tx = beta.x;
+    this.ty = beta.y;
+    this.speed  = 2.5 + Math.random() * 3;
+    this.life   = 0;
+    this.maxLife = 0.85 + Math.random() * 0.15;
+    this.size   = 1.2 + Math.random() * 2;
+    this.hue    = Math.random() < 0.5 ? 190 : 290; // cyan or magenta
+    this.chaosX = 0;
+    this.chaosY = 0;
+    this.trail  = [];
+    this.alpha  = 1;
+  }
+
+  update() {
+    this.life = Math.min(this.life + 0.012 * this.speed, 1);
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > 12) this.trail.shift();
+
+    // Noise-driven scattering
+    const scatter = SIM.noise * (3 + SIM.entropy * 5);
+    const dx = (this.tx - this.x);
+    const dy = (this.ty - this.y);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (SIM.phase === 'danger') {
+      // CHAOS: particles scatter violently
+      this.chaosX += (Math.random() - 0.5) * scatter * 12;
+      this.chaosY += (Math.random() - 0.5) * scatter * 12;
+      this.chaosX *= 0.93;
+      this.chaosY *= 0.93;
+      this.x += (dx / dist) * this.speed * 0.3 + this.chaosX * 0.9;
+      this.y += (dy / dist) * this.speed * 0.3 + this.chaosY * 0.9;
+    } else if (SIM.phase === 'warn') {
+      // WARN: slight instability
+      this.x += (dx / dist) * this.speed + (Math.random()-0.5) * scatter * 3;
+      this.y += (dy / dist) * this.speed + (Math.random()-0.5) * scatter * 3;
+    } else {
+      // SAFE: coherent beam with tight spread
+      this.x += (dx / dist) * this.speed + (Math.random()-0.5) * 1.5;
+      this.y += (dy / dist) * this.speed + (Math.random()-0.5) * 1.5;
+    }
+
+    this.alpha = Math.sin(this.life * Math.PI);
+    if (this.life >= 1) this.reset();
+  }
+
+  draw(ctx) {
+    const a = this.alpha;
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = i / this.trail.length;
+      ctx.beginPath();
+      ctx.arc(this.trail[i].x, this.trail[i].y, this.size * 0.5 * t, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${this.hue}, 100%, 65%, ${a * t * 0.4})`;
+      ctx.fill();
+    }
+    // Core
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(this.x,this.y,0, this.x,this.y,this.size*2);
+    grad.addColorStop(0, `hsla(${this.hue},100%,90%,${a})`);
+    grad.addColorStop(1, `hsla(${this.hue},100%,60%,0)`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+}
+
+// Spawn particle pool
+const PARTICLE_COUNT = 160;
+const particles = Array.from({length: PARTICLE_COUNT}, () => {
+  const p = new Particle();
+  p.life = Math.random(); // stagger initial positions
+  return p;
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// § 5 · NODE RENDERING
+// ─────────────────────────────────────────────────────────────────────
+function drawNode(ctx, x, y, color, label, tick) {
+  const pulse = 0.5 + 0.5 * Math.sin(tick * 0.04);
+  const r1 = 28, r2 = 44 + pulse * 8, r3 = 60 + pulse * 16;
+
+  // Outermost halo
+  const halo = ctx.createRadialGradient(x,y,r1, x,y,r3);
+  halo.addColorStop(0, color + '30');
+  halo.addColorStop(1, color + '00');
+  ctx.beginPath(); ctx.arc(x,y,r3,0,Math.PI*2);
+  ctx.fillStyle = halo; ctx.fill();
+
+  // Pulsing ring
+  ctx.beginPath(); ctx.arc(x,y,r2,0,Math.PI*2);
+  ctx.strokeStyle = color + Math.floor(40+pulse*40).toString(16).padStart(2,'0');
+  ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Outer ring
+  ctx.beginPath(); ctx.arc(x,y,r1,0,Math.PI*2);
+  ctx.strokeStyle = color + 'aa';
+  ctx.lineWidth = 2; ctx.stroke();
+
+  // Core fill
+  const core = ctx.createRadialGradient(x,y,0, x,y,r1);
+  core.addColorStop(0, color + 'ff');
+  core.addColorStop(0.3, color + '88');
+  core.addColorStop(1, color + '22');
+  ctx.beginPath(); ctx.arc(x,y,r1,0,Math.PI*2);
+  ctx.fillStyle = core; ctx.fill();
+
+  // Hex pattern overlay
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 0.5;
+  for (let a = 0; a < 6; a++) {
+    const angle = (a / 6) * Math.PI * 2 + tick * 0.01;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(angle) * r1, y + Math.sin(angle) * r1);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 6 · CHANNEL / BEAM RENDERING
+// ─────────────────────────────────────────────────────────────────────
+function drawChannel(ctx, alpha, beta, tick) {
+  if (SIM.phase === 'danger') return; // no beam in chaos
+
+  const opacity = SIM.phase === 'warn' ? (0.3 + 0.3 * Math.sin(tick * 0.15)) : 0.18;
+  const jitter  = SIM.phase === 'warn' ? Math.sin(tick * 0.3) * 6 : 0;
+
+  // Beam tube
+  ctx.beginPath();
+  ctx.moveTo(alpha.x, alpha.y);
+  ctx.quadraticCurveTo(
+    (alpha.x + beta.x) / 2, (alpha.y + beta.y) / 2 + jitter,
+    beta.x, beta.y
+  );
+  ctx.strokeStyle = `rgba(0,245,255,${opacity})`;
+  ctx.lineWidth = SIM.phase === 'warn' ? 6 : 10;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Inner core beam
+  ctx.beginPath();
+  ctx.moveTo(alpha.x, alpha.y);
+  ctx.quadraticCurveTo(
+    (alpha.x + beta.x) / 2, (alpha.y + beta.y) / 2 + jitter,
+    beta.x, beta.y
+  );
+  ctx.strokeStyle = `rgba(180,255,255,${opacity * 1.5})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 7 · GRID / BACKGROUND
+// ─────────────────────────────────────────────────────────────────────
+function drawBackground(ctx, W, H, tick) {
+  ctx.clearRect(0, 0, W, H);
+
+  // Deep space gradient
+  const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.7);
+  bg.addColorStop(0, '#040d18');
+  bg.addColorStop(1, '#020408');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.strokeStyle = '#00f5ff';
+  ctx.lineWidth = 0.5;
+  const GRID = 40;
+  for (let x = 0; x < W; x += GRID) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += GRID) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Perspective lines from center
+  ctx.save();
+  ctx.globalAlpha = 0.04;
+  ctx.strokeStyle = '#00f5ff';
+  ctx.lineWidth = 1;
+  for (let a = 0; a < 24; a++) {
+    const angle = (a/24)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(W/2, H/2);
+    ctx.lineTo(W/2 + Math.cos(angle)*W, H/2 + Math.sin(angle)*H);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Glitch lines in danger mode
+  if (SIM.phase === 'danger' && Math.random() < 0.3) {
+    ctx.save();
+    ctx.globalAlpha = 0.15 + Math.random() * 0.15;
+    ctx.fillStyle = '#ff2244';
+    const gy = Math.random() * H;
+    ctx.fillRect(0, gy, W, 1 + Math.random() * 3);
+    ctx.restore();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 8 · FIDELITY FORMULA
+//   F(t) = (1 - S) / (1 + ln(1 + p * q))
+//   where S = entropy, p = noise, q = qubits (scaled)
+// ─────────────────────────────────────────────────────────────────────
+function computeFidelity() {
+  const p = SIM.noise;
+  const S = SIM.entropy;
+  const q = SIM.qubits;
+  return (1.0 - S) / (1.0 + Math.log(1.0 + p * q));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 9 · PHASE DETERMINATION
+// ─────────────────────────────────────────────────────────────────────
+function updatePhase(fidelity) {
+  const effectiveNoise = SIM.noise * SIM.qubits;
+  if (fidelity < 0.25 || effectiveNoise > 1e8) {
+    SIM.phase = 'danger';
+  } else if (fidelity < 0.6 || effectiveNoise > 1e5) {
+    SIM.phase = 'warn';
+  } else {
+    SIM.phase = 'safe';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 10 · TELEMETRY GRAPH RENDERER
+// ─────────────────────────────────────────────────────────────────────
+function drawGraph(ctx, buffer, W, H, color, min, max, label) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(4,13,20,0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Gridlines
+  ctx.strokeStyle = 'rgba(0,245,255,0.08)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = (i/4) * H;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  // Fill area under curve
+  const areaGrad = ctx.createLinearGradient(0,0,0,H);
+  areaGrad.addColorStop(0, color + '30');
+  areaGrad.addColorStop(1, color + '00');
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let i = 0; i < GRAPH_LEN; i++) {
+    const idx = (histIdx + i) % GRAPH_LEN;
+    const val = buffer[idx];
+    const nx = (i / (GRAPH_LEN-1)) * W;
+    const ny = H - ((val - min) / (max - min)) * H;
+    i === 0 ? ctx.lineTo(nx, ny) : ctx.lineTo(nx, ny);
+  }
+  ctx.lineTo(W, H);
+  ctx.fillStyle = areaGrad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  for (let i = 0; i < GRAPH_LEN; i++) {
+    const idx = (histIdx + i) % GRAPH_LEN;
+    const val = buffer[idx];
+    const nx = (i / (GRAPH_LEN-1)) * W;
+    const ny = H - ((val - min) / (max - min)) * H;
+    i === 0 ? ctx.moveTo(nx, ny) : ctx.lineTo(nx, ny);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 6;
+  ctx.shadowColor = color;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 11 · HUD UPDATES
+// ─────────────────────────────────────────────────────────────────────
+function updateHUD(fidelity) {
+  const p = SIM.noise, S = SIM.entropy, q = SIM.qubits;
+  const decayRate = fidelity - SIM.prevFid;
+  SIM.prevFid = fidelity;
+  if (fidelity > SIM.peakFid) SIM.peakFid = fidelity;
+
+  // Derived quantities
+  const kraus      = Math.max(0, 1 - p * 0.3).toFixed(4);
+  const decoherence = (p * q / 1e6).toExponential(2);
+  const chanCap    = Math.max(0, 1 - p - S * 0.5).toFixed(4);
+  const effNoise   = (p * q).toExponential(2);
+  const threshMarg = p * q > CRITICAL_THRESHOLD ? 'BREACHED' : 'SAFE';
+  const purity     = Math.max(0, 1 - S).toFixed(4);
+
+  // Helpers
+  const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  const setClass = (id, cls) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'metric-value ' + cls;
+  };
+
+  const phaseClass = SIM.phase === 'danger' ? 'danger' : SIM.phase === 'warn' ? 'warn' : '';
+
+  setVal('kraus-norm',       kraus);
+  setVal('decoherence',      decoherence);
+  setVal('channel-cap',      chanCap);
+  setVal('eff-noise',        effNoise);
+  setVal('threshold-margin', threshMarg);
+  setVal('fidelity-now',     fidelity.toFixed(4));
+  setVal('fidelity-peak',    SIM.peakFid.toFixed(4));
+  setVal('fidelity-decay',   (decayRate >= 0 ? '+' : '') + decayRate.toFixed(4));
+  setVal('vn-entropy',       S.toFixed(4));
+  setVal('purity',           purity);
+  setVal('particle-count',   PARTICLE_COUNT);
+  setVal('traj-delta',       (p * 180).toFixed(2) + '°');
+  setVal('coh-length',       p < 0.01 ? '∞' : (1/p).toFixed(1));
+
+  // Phase state labels
+  setVal('phase-state',  SIM.phase === 'safe' ? 'STABLE' : SIM.phase === 'warn' ? 'TRANSITIONAL' : 'CHAOS');
+  setVal('ccp',          SIM.phase === 'safe' ? 'MAINTAINED' : 'DEGRADING');
+  setVal('cidt',         SIM.phase === 'danger' ? 'POSITIVE ⚠' : 'NEGATIVE');
+
+  // Apply warning classes to metrics
+  ['fidelity-now','fidelity-peak','fidelity-decay','phase-state','ccp','cidt','channel-cap'].forEach(id => {
+    setClass(id, phaseClass);
+  });
+
+  // Verdict banner
+  const verdict = document.getElementById('verdict');
+  verdict.className = 'active ' + SIM.phase;
+  if (SIM.phase === 'safe') {
+    verdict.textContent = '✦ SUCCESSFUL TELEPORTATION — IDENTITY PRESERVED ✦';
+  } else if (SIM.phase === 'warn') {
+    verdict.textContent = '⚠ IDENTITY DIVERGENT TRANSITION — MONITORING ⚠';
+  } else {
+    verdict.textContent = '☠ CRITICAL CHAOS IDENTITY DIVERGENCE ☠';
+  }
+
+  // State indicator dots
+  ['safe','warn','danger'].forEach(s => {
+    document.getElementById('dot-'+s).classList.toggle('active', SIM.phase === s);
+    document.getElementById('txt-'+s).classList.toggle('active', SIM.phase === s);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 12 · CLOCK
+// ─────────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toTimeString().slice(0,8);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 13 · SLIDER BINDINGS
+// ─────────────────────────────────────────────────────────────────────
+function bindSliders() {
+  document.getElementById('slider-noise').addEventListener('input', e => {
+    SIM.noise = parseFloat(e.target.value);
+    document.getElementById('noise-val').textContent = SIM.noise.toFixed(3);
+  });
+  document.getElementById('slider-entropy').addEventListener('input', e => {
+    SIM.entropy = parseFloat(e.target.value);
+    document.getElementById('entropy-val').textContent = SIM.entropy.toFixed(2);
+  });
+  document.getElementById('slider-qubits').addEventListener('input', e => {
+    SIM.qubits = parseInt(e.target.value) * 1000;
+    document.getElementById('qubit-val').textContent = e.target.value;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 14 · MAIN ANIMATION LOOP
+// ─────────────────────────────────────────────────────────────────────
+let lastGraphTick = 0;
+
+function loop(timestamp) {
+  SIM.tick++;
+
+  const W = canvas.width, H = canvas.height;
+  const { alpha, beta } = getNodes();
+
+  // ── Compute physics ──
+  const fidelity = computeFidelity();
+  SIM.fidelity   = fidelity;
+  updatePhase(fidelity);
+
+  // ── Update graph buffers every ~10 frames ──
+  if (SIM.tick - lastGraphTick > 10) {
+    histFid[histIdx]   = fidelity;
+    histEnt[histIdx]   = SIM.entropy + (Math.random()-0.5)*0.01;
+    histNoise[histIdx] = SIM.noise   + (Math.random()-0.5)*0.005;
+    histIdx = (histIdx + 1) % GRAPH_LEN;
+    lastGraphTick = SIM.tick;
+  }
+
+  // ── Draw background ──
+  drawBackground(ctx, W, H, SIM.tick);
+
+  // ── Draw channel beam ──
+  drawChannel(ctx, alpha, beta, SIM.tick);
+
+  // ── Draw particles ──
+  particles.forEach(p => { p.update(); p.draw(ctx); });
+
+  // ── Draw nodes ──
+  drawNode(ctx, alpha.x, alpha.y, '#00f5ff', 'α', SIM.tick);
+  drawNode(ctx, beta.x,  beta.y,  '#ff00aa', 'β', SIM.tick);
+
+  // ── Mini data annotations ──
+  ctx.save();
+  ctx.font = '10px "Share Tech Mono"';
+  ctx.fillStyle = 'rgba(0,245,255,0.5)';
+  ctx.fillText(`F(t) = ${fidelity.toFixed(4)}`, alpha.x - 38, alpha.y - 70);
+  ctx.fillStyle = 'rgba(255,0,170,0.5)';
+  ctx.fillText(`S(ρ) = ${SIM.entropy.toFixed(3)}`, beta.x - 38, beta.y - 70);
+  ctx.restore();
+
+  // ── Update HUD ──
+  updateHUD(fidelity);
+
+  // ── Draw telemetry graphs ──
+  drawGraph(fCtx, histFid,   fCanvas.width, fCanvas.height, '#00ff88', 0, 1,   'fidelity');
+  drawGraph(eCtx, histEnt,   eCanvas.width, eCanvas.height, '#ff00aa', 0, 1,   'entropy');
+  drawGraph(nCtx, histNoise, nCanvas.width, nCanvas.height, '#ffdd00', 0, 1,   'noise');
+
+  requestAnimationFrame(loop);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// § 15 · BOOT
+// ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+bindSliders();
+setInterval(updateClock, 1000);
+updateClock();
+
+// Pre-fill history with initial values
+histFid.fill(computeFidelity());
+histEnt.fill(SIM.entropy);
+histNoise.fill(SIM.noise);
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
